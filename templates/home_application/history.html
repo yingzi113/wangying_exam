@@ -1,0 +1,283 @@
+<%inherit file="/index.html"/>
+
+<%block name="content">
+
+<style>
+    .panel-default > .panel-heading {
+        background: white;
+    }
+
+    .panel {
+        background-color: rgb(237, 241, 243);
+        border: none;
+        border-top: 1px solid #ddd;
+    }
+
+    .panel-body {
+        background-color: white;
+        margin: 20px;
+    }
+
+    .col-sm-3 {
+        width: 15%;
+    }
+    .time-select {
+        width: 40%;
+    }
+
+    .time-sep {
+        display: inline-block;
+        padding: 7px 10px;
+    }
+
+    [v-cloak] {
+        display: none;
+    }
+</style>
+
+<div id="history" class="king-container clearfix">
+    <div class="panel panel-default mb0">
+        <div class="panel-heading"> 历史记录</div>
+        <div class="panel-body">
+
+            <form class="form-horizontal">
+                    <div class="form-group clearfix ">
+                        <label class="col-sm-3 control-label bk-lh30 pt0">选择业务：</label>
+                        <div class="col-sm-9">
+                            <select v-model="item.biz_id" name="" id="" class="form-control bk-valign-top">
+                                <option selected="selected" value="">--请选择--</option>
+                                <option v-for="item in app_list" :value="item.id" v-cloak>{{ item.name }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group clearfix ">
+                        <label class="col-sm-3 control-label bk-lh30 pt0">选择时间：</label>
+                        <div class="col-sm-9">
+                            <input type="text" id="start" class="form-control bk-valign-top time-select"
+                                   placeholder="开始时间">
+                            <span class="time-sep">--</span>
+                            <input type="text" id="end" class="form-control bk-valign-top time-select"
+                                   placeholder="结束时间">
+                        </div>
+
+                    </div>
+                    <div class="form-group clearfix">
+                        <div class="col-sm-9 col-sm-offset-3">
+                            <button type="button" class="king-btn mr10  king-success" @click="get_records">查询</button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="panel-table">
+                    <table id="table2_demo1" class="table table-bordered table-hover dataTable no-footer" role="grid">
+                        <thead>
+                        <tr role="row">
+                            <th class="sorting_disabled" rowspan="1" colspan="1" style="width: 128px;">业务</th>
+                            <th class="sorting_disabled" rowspan="1" colspan="1" style="width: 189px;">用户</th>
+                            <th class="sorting_disabled" rowspan="1" colspan="1" style="width: 111px;">作业ID</th>
+                            <th class="sorting_disabled" rowspan="1" colspan="1" style="width: 111px;">所选IP</th>
+                            <th class="sorting_disabled" rowspan="1" colspan="1" style="width: 107px;">操作时间</th>
+                            <th class="sorting_disabled" rowspan="1" colspan="1" style="width: 125px;">状态</th>
+                            <th class="sorting_disabled" rowspan="1" colspan="1" style="width: 125px;">作业日志</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-for="item in records_list" role="row" class="odd">
+                            <td v-cloak>{{ item.app_name }}</td>
+                            <td v-cloak>{{ item.creator }}</td>
+                            <td v-cloak>{{ item.job_id }}</td>
+                            <td v-cloak>{{ item.ips }}</td>
+                            <td v-cloak>{{ item.create_time }}</td>
+                            <td v-cloak>{{ item.status_message }}</td>
+                            <td v-cloak v-html="item.content">
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+
+                </div>
+
+        </div>
+
+    </div>
+
+
+</div>
+
+</%block>
+
+
+
+
+<script type="text/javascript">
+
+    var vm = new Vue({
+        el: '#history',
+        data: {
+            app_list: [],
+            user_list: [],
+            item: {
+                biz_id: '',
+                start_time: '',
+                end_time: ''
+            },
+            records_list: [],
+            ip_detail_list: []
+        },
+        created: function () {
+            var vm = this;
+            vm.get_app();
+            vm.get_records();
+        },
+        watch: {
+            records_list: function () {
+                this.$nextTick(function () {
+
+                    $(function () {
+                        var language = {
+                            search: '搜索：',
+                            lengthMenu: "每页显示 _MENU_ 记录",
+                            zeroRecords: "没找到相应的数据！",
+                            info: "分页 _PAGE_ / _PAGES_",
+                            infoEmpty: "暂无数据！",
+                            infoFiltered: "(从 _MAX_ 条数据中搜索)",
+                            paginate: {
+                                first: '首页',
+                                last: '尾页',
+                                previous: '上一页',
+                                next: '下一页',
+                            }
+                        }
+                        $('#table2_demo1').dataTable({
+                            paging: true, //隐藏分页
+                            ordering: false, //关闭排序
+                            info: false, //隐藏左下角分页信息
+                            searching: false, //关闭搜索
+                            pageLength: 5, //每页显示几条数据
+                            lengthChange: false, //不允许用户改变表格每页显示的记录数
+                            language: language //汉化
+                        });
+                    })
+
+                })
+            }
+        },
+
+        mounted() {
+            var start_time = laydate.render({
+                elem: '#start',
+                format: 'yyyy-MM-dd HH:mm:ss',
+                type: "datetime",
+                choose: function (date) {
+
+                },
+                done: function (value, date) {
+                    vm.item.start_time = value;
+                    end_time.config.min = {
+                        year: date.year,
+                        month: date.month - 1,
+                        date: date.date,
+                        hours: date.hours,
+                        minutes: date.minutes,
+                        seconds: date.seconds
+                    };
+                    end_time.config.value = {
+                        year: date.year,
+                        month: date.month - 1,
+                        date: date.date,
+                        hours: date.hours,
+                        minutes: date.minutes,
+                        seconds: date.seconds
+                    };
+                }
+
+            })
+
+            var end_time = laydate.render({
+                elem: '#end',
+                format: 'yyyy-MM-dd HH:mm:ss',
+                type: "datetime",
+                choose: function () {
+
+                },
+                done: function (value, date) {
+
+                    vm.item.end_time = value;
+                    start_time.config.max = {
+                        year: date.year,
+                        month: date.month - 1,
+                        date: date.date,
+                        hours: date.hours,
+                        minutes: date.minutes,
+                        seconds: date.seconds
+                    };
+                }
+
+            })
+        },
+        methods: {
+            get_app: function () {
+                var vm = this;
+                $.ajax({
+                    url: '${SITE_URL}api/search_business/',
+                    type: 'get',
+                    dataType: 'json',
+                    success: function (data) {
+
+                        if (data.result) {
+                            vm.app_list = data.data;
+                        }else {
+                            layer.alert(data.message)
+                        }
+                    }
+                })
+            },
+
+
+            get_records: function () {
+
+                var index = layer.load(1, {
+                    shade: [0.1, '#fff'] //0.1透明度的白色背景
+                });
+                var vm = this;
+                console.log(vm.item);
+                $.ajax({
+                    url: '${SITE_URL}api/get_records/',
+                    type: 'get',
+                    dataType: 'json',
+                    data: vm.item,
+                    success: function (data) {
+                        console.log(data);
+                        console.log('records');
+                        layer.close(index);
+
+                        if (data.result) {
+
+                            if ($('#table2_demo1').hasClass('dataTable')) {
+                                var table = $('#table2_demo1').dataTable();
+                                table.fnDestroy(); //还原初始化了的datatable
+                            }
+
+                            vm.records_list = data.data;
+                        }else {
+                            layer.alert(data.message)
+                        }
+                    },
+                    error: function () {
+                        layer.close(index);
+
+                    }
+                })
+            },
+            checkDetail: function (item) {
+                var vm = this;
+                vm.ip_detail_list = item.detail;
+                window.location.href = `${SITE_URL}record_detail?id=` + item.id
+
+            }
+        }
+
+    })
+
+
+</script>

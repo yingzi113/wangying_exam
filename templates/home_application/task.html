@@ -1,0 +1,247 @@
+<%inherit file="/index.html"/>
+
+<%block name="content">
+
+<style>
+    .panel-default > .panel-heading {
+        background: white;
+    }
+
+    .panel {
+        background-color: rgb(237, 241, 243);
+        border: none;
+        border-top: 1px solid #ddd;
+    }
+
+    .panel-body {
+        background-color: white;
+        margin: 20px;
+    }
+
+    .col-sm-3 {
+        width: 15%;
+    }
+
+    [v-cloak] {
+        display: none;
+    }
+</style>
+
+<div id="task" class="king-container clearfix">
+    <div class="panel panel-default mb0">
+        <div class="panel-heading"> 任务信息</div>
+        <div class="panel-body">
+            <form class="form-horizontal">
+                    <div class="form-group clearfix ">
+                        <label class="col-sm-3 control-label bk-lh30 pt0">选择业务：</label>
+                        <div class="col-sm-9">
+                            <select v-model="selected_app_id" name="" id="" class="form-control bk-valign-top">
+                                <option selected="selected" value="" v-cloak>--请选择--</option>
+                                <option v-for="item in app_list" :value="item.id" v-cloak>{{ item.name }}</option>
+                            </select>
+                        </div>
+                    </div>
+                <div class="form-group clearfix ">
+                        <label class="col-sm-3 control-label bk-lh30 pt0">选择集群：</label>
+                        <div class="col-sm-9">
+                            <select v-model="selected_set_id" class="form-control bk-valign-top">
+                                <option selected="selected" value="" v-cloak>--请选择--</option>
+                                <option v-for="item in set_list" :value="item.bk_set_id" v-cloak>{{ item.bk_set_name }}</option>
+
+                            </select>
+                        </div>
+                    </div>
+
+
+                    <div class="form-group clearfix">
+                        <div class="col-sm-9 col-sm-offset-3">
+                            <button type="button" class="king-btn mr10  king-success" @click="submit">执行作业</button>
+                        </div>
+                    </div>
+                </form>
+
+            <div>
+                    <div class="panel-heading"> IP列表
+                    </div>
+                    <table class="table table-header-bg table-hover mb0" id="table_demo2">
+                        <thead>
+                        <tr>
+                            <th style="width: 25px">
+                                <input type="checkbox" name="checkall" v-model="checkedAll">
+                            </th>
+                            <th style="width: 100px">序号</th>
+                            <th style="width:25%">IP</th>
+                            <th style="width:25%">主机名</th>
+                            <th style="width:15%">操作系统</th>
+                            <th style="width:15%">云区域</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+
+                        <tr v-for="(item,index) in host_list">
+                            <td>
+                                <input type="checkbox" v-model="sIP_list" :value="item">
+                            </td>
+                            <td>{{ index+1 }}</td>
+                            <td>{{ item.ip }}</td>
+                            <td>{{ item.hostname }}</td>
+                            <td>{{ item.os_name }}</td>
+                            <td>{{ item.bk_cloud_name }}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+
+
+
+        </div>
+
+    </div>
+
+
+</div>
+
+
+</%block>
+
+<script type="text/javascript">
+
+    var vm = new Vue({
+        el:'#task',
+        data:{
+            app_list: [],
+            set_list:[],
+            host_list: [],
+            script_list: [],
+            selected_app_id: '',
+            selected_set_id:'',
+            sIP_list: [],
+            checkedAll: false,
+            selected_script_id: '',
+            script_param: ''
+        },
+        watch:{
+            selected_app_id: function (value) {
+                vm.get_set_list(value);
+            },
+            selected_set_id:function(value){
+                vm.get_host(value)
+            },
+            checkedAll: function (value) {
+                if (value) {
+                    vm.sIP_list = vm.host_list;
+                } else {
+                    vm.sIP_list = [];
+                }
+            }
+        },
+        created: function () {
+
+            var vm = this;
+            vm.get_app();
+
+        },
+        methods:{
+            get_app: function () {
+                var vm = this;
+                $.ajax({
+                    url: '${SITE_URL}api/search_business/',
+                    type: 'get',
+                    dataType: 'json',
+                    success: function (res) {
+                        console.log(res);
+                        if (res['result']) {
+                            vm.app_list = res['data'];
+                        }
+                    }
+                })
+            },
+            get_set_list:function(value){
+                $.ajax({
+                    url: '${SITE_URL}api/get_set_list/',
+                    type: 'get',
+                    dataType: 'json',
+                    data: {'bk_biz_id': value},
+                    success: function (data) {
+                        console.log(data);
+                        if (data.result) {
+                            vm.set_list = data.data;
+                        }
+
+                    }
+                })
+            },
+            get_host: function (value) {
+                var vm = this;
+                $.ajax({
+                    url: '${SITE_URL}api/get_host/',
+                    type: 'get',
+                    dataType: 'json',
+                    data: {'bk_set_id': value,'bk_biz_id':vm.selected_app_id},
+                    success: function (data) {
+                        console.log(data);
+                        if (data.result) {
+                            vm.host_list = data.data;
+                        }
+
+                    }
+                })
+            },
+
+            submit:function () {
+
+                var selected_app = {}
+                for (var i = 0; i < vm.app_list.length; i++) {
+                    var item = vm.app_list[i];
+                    if (item['id'] == vm.selected_app_id) {
+                        selected_app = item;
+                    }
+
+                }
+                var selected_script = {};
+
+                for (var i = 0; i < vm.script_list.length; i++) {
+                    var item = vm.script_list[i];
+                    if (item['script_id'] == vm.selected_script_id) {
+                        selected_script = item;
+                    }
+                }
+
+                console.log(selected_app);
+                console.log(selected_script);
+                console.log(vm.sIP_list);
+
+
+                var parame = {
+                    'app': JSON.stringify(selected_app),
+                    'ip_list': JSON.stringify(vm.sIP_list),
+                };
+                $.ajax({
+                    url: '${SITE_URL}api/execute_job/',
+                    type: 'post',
+                    dataType: 'json',
+                    data: parame,
+                    success: function (data) {
+                        if (data.result) {
+                            layer.confirm('执行成功', {
+                                btn: ['查看记录', '继续执行'] //按钮
+                            }, function () {
+                                window.location.href = `${SITE_URL}history`
+                            }, function () {
+
+                            });
+
+                        } else {
+                            layer.alert(data.message)
+                        }
+                    }
+                })
+
+            }
+        }
+    })
+
+
+
+</script>
